@@ -352,6 +352,7 @@ _PLUGIN_PROFILE_ENV_KEYS = frozenset(
         "HINDSIGHT_API_LOG_LEVEL",
         "HINDSIGHT_API_LLM_BASE_URL",
         "HINDSIGHT_EMBED_DAEMON_IDLE_TIMEOUT",
+        "HINDSIGHT_EMBED_API_DATABASE_URL",
     }
 )
 
@@ -384,6 +385,13 @@ def _build_embedded_profile_env(config: dict[str, Any], *, llm_api_key: str | No
             base_url = ""
     if base_url:
         env_values["HINDSIGHT_API_LLM_BASE_URL"] = str(base_url)
+    # Keep the database identity profile-scoped and durable. Without this mapping,
+    # hindsight-embed falls back to pg0://hindsight-embed-{profile}; a non-systemd
+    # Hermes launch (CLI, a new session) then resolves the daemon to a fresh pg0
+    # instance instead of the authoritative pg0://hindsight bank.
+    database_url = config.get("database_url")
+    if database_url:
+        env_values["HINDSIGHT_EMBED_API_DATABASE_URL"] = str(database_url)
     if (idle_timeout := config.get("idle_timeout")) is None:
         idle_timeout = os.environ.get("HINDSIGHT_IDLE_TIMEOUT")
     if idle_timeout is not None and idle_timeout != "":

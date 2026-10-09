@@ -317,3 +317,17 @@ def test_a_rewrite_keeps_the_keys_the_plugin_does_not_own(hermes_env):
         "HINDSIGHT_API_TENANT_API_KEY": "t",
     }
     assert embedded._profile_env_drifted(_CFG) is False
+
+
+def test_database_route_is_materialized_into_profile_env(hermes_env):
+    """A non-systemd Hermes launch must not fall back to hindsight-embed-{profile}."""
+    env = embedded._build_embedded_profile_env(
+        {**_CFG, "database_url": "pg0://hindsight"}, llm_api_key="sk"
+    )
+    assert env["HINDSIGHT_EMBED_API_DATABASE_URL"] == "pg0://hindsight"
+
+
+def test_database_route_is_plugin_owned_drift(hermes_env):
+    """The database pin is plugin-owned: a wrong pin in the profile env counts as drift."""
+    _profile_env(_OWNED + "HINDSIGHT_EMBED_API_DATABASE_URL=pg0://hindsight-embed-hermes\n")
+    assert embedded._profile_env_drifted({**_CFG, "database_url": "pg0://hindsight"}) is True
